@@ -1,0 +1,125 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  STUDENT
+  INSTRUCTOR
+  ADMIN
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id              String        @id @default(uuid())
+  name            String
+  email           String        @unique
+  password        String
+  role            Role          @default(STUDENT)
+  isVerified      Boolean       @default(false)
+  bio             String?
+  targetBandScore Float?
+  avatarUrl       String?
+  avatarPublicId  String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  deletedAt       DateTime?
+
+  schedules       Schedule[]
+  appointments    Appointment[]
+  evaluations     Evaluation[]
+  auditLogs       AuditLog[]
+}
+
+model Schedule {
+  id           String        @id @default(uuid())
+  instructorId String
+  instructor   User          @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  date         String        // Format: YYYY-MM-DD
+  startTime    String        // Format: HH:mm
+  endTime      String        // Format: HH:mm
+  isBooked     Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  deletedAt    DateTime?
+
+  appointment  Appointment?
+}
+
+model Appointment {
+  id           String            @id @default(uuid())
+  studentId    String
+  student      User              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  scheduleId   String            @unique
+  schedule     Schedule          @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  instructorId String
+  status       AppointmentStatus @default(PENDING)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  deletedAt    DateTime?
+
+  payment      Payment?
+  evaluation   Evaluation?
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  appointmentId String        @unique
+  appointment   Appointment   @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  amount        Float
+  transactionId String        @unique
+  status        PaymentStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Evaluation {
+  id            String      @id @default(uuid())
+  appointmentId String      @unique
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  instructorId  String
+  instructor    User        @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  listening     Float
+  reading       Float
+  writing       Float
+  speaking      Float
+  overallBand   Float
+  feedback      String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Material {
+  id          String   @id @default(uuid())
+  title       String
+  category    String   // e.g., "Listening", "Reading", "Writing", "Speaking"
+  content     String   // Markdown or rich text
+  fileUrl     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String
+  details   String
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
